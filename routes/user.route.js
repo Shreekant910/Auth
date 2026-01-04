@@ -5,6 +5,30 @@ const { userTable , sessionT } = require("../db/schema");
 const { randomBytes, createHmac , randomUUID } = require("node:crypto");
 const { eq } = require("drizzle-orm");
 const jwt = require("jsonwebtoken")
+const {requireRole} = require("../middleware/session.middleware")
+
+
+const adminrestricetedMiddleWare = requireRole('ADMIN');
+
+// route for all admin to access all users
+
+userrouter.get("/allusers",adminrestricetedMiddleWare,async (req,res)=>{
+
+    const allUser = await db.select({
+        id:userTable.id,
+        name :userTable.name,
+        role:userTable.role
+    }).from(userTable)
+
+    return res.status(200).json({
+        users:allUser
+    })
+})
+
+
+
+
+
 
 
 
@@ -21,13 +45,17 @@ userrouter.patch("/update",async (req,res)=>{
 })
 
 
+
+
+
+
 // to get to know the person logged in
-userrouter.get("/",(req,res)=>{
+userrouter.get("/",adminrestricetedMiddleWare,(req,res)=>{
 console.log(" heyy i am here")
     const user = req.user;
 
     if(!user){
-        return res.status(404).json({error: ' unauthenticated' })
+        return res.status(404).json({error: ' UNauthenticated' })
     }
     return res.status(200).json({user})
 }); 
@@ -68,7 +96,13 @@ userrouter.post("/signup", async (req, res) => {
 userrouter.post("/login",async(req,res)=>{
     console.log("user inside login")
     const {email , password} = req.body
-    const [existingUser]= await db.select({id:userTable.id,email:userTable.email,salt:userTable.salt,password:userTable.password}).from(userTable).where((table)=>eq(table.email,email));
+    const [existingUser]= await db.select(
+        {id:userTable.id,
+        email:userTable.email,
+        salt:userTable.salt,
+        password:userTable.password,
+        role:userTable.role
+    }).from(userTable).where((table)=>eq(table.email,email));
 console.log(existingUser)
 
     if(!existingUser){
@@ -83,17 +117,26 @@ console.log(`hash ${hashedPassword} , salt ${salt}`)
         return res.status(404).json({error:'invalid cred'})
     }
 
-const sessionId = randomUUID();
-   const result = await db.insert(sessionT).values({
-    id:sessionId,
-  userId: existingUser.id,
-});
+// const sessionId = randomUUID();
+//    const result = await db.insert(sessionT).values({
+//     id:sessionId,
+//   userId: existingUser.id,
+// });
+
+payload={
+    id: existingUser.id,
+    email: existingUser.email,
+    name : existingUser.name,
+    role: existingUser.role
+}
+
+const token = jwt.sign(payload,"secret");
 
 
 return res.status(200).json({
   success: "user logged in",
-  sessionId,
-//   token
+//   sessionId,
+  token
 });
 
 })

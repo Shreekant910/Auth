@@ -1,6 +1,6 @@
 const express = require("express");
 const userroute = require("./routes/user.route")
-const sessionMiddle = require("./middleware/session.middleware")
+const { sessionMiddle } = require("./middleware/session.middleware")
 const app = express();
 app.use(express.json());
 
