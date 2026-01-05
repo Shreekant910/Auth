@@ -3,7 +3,7 @@ const userrouter = express.Router();
 const db = require("../db/index");
 const { userTable , sessionT } = require("../db/schema");
 const { randomBytes, createHmac , randomUUID } = require("node:crypto");
-const { eq } = require("drizzle-orm");
+const { eq, count } = require("drizzle-orm");
 const jwt = require("jsonwebtoken")
 const {requireRole} = require("../middleware/session.middleware")
 
@@ -14,14 +14,27 @@ const adminrestricetedMiddleWare = requireRole('ADMIN');
 
 userrouter.get("/allusers",adminrestricetedMiddleWare,async (req,res)=>{
 
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
     const allUser = await db.select({
         id:userTable.id,
         name :userTable.name,
         role:userTable.role
-    }).from(userTable)
+    }).from(userTable).limit(limit).offset(offset);
+
+    const totalUsersResult = await db.select({ count: count() }).from(userTable);
+    console.log(totalUsersResult);
+    const totalUsers = totalUsersResult[0].count;
+    console.log(totalUsers)
 
     return res.status(200).json({
-        users:allUser
+        users: allUser,
+        total: totalUsers,
+        page,
+        limit,
+        totalPages: Math.ceil(totalUsers / limit)
     })
 })
 
