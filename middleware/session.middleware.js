@@ -26,7 +26,8 @@ const sessionMiddle = async (req,res,next)=>{
         // }
         // req.user = data;
         //  next();
-
+  
+        //JWT session
          const tokenHeader = req.headers['authorization']
         if(!tokenHeader){
             return next()
